@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "775069002777",
+    "project_id": "todo-gen-ia",
+    "storage_bucket": "todo-gen-ia.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:775069002777:android:2b37e648bac2ff34e10e88",
+        "android_client_info": {
+          "package_name": "br.dev.yago.todo_genia"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDvwil7XysACCdMR4FiC2UwPdF2v-o0vrI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
