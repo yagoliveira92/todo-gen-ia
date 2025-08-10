@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_ai/firebase_ai.dart';
+import 'package:provider/provider.dart';
 import 'package:todo_genia/src/tools/todo_tools.dart';
+import 'package:todo_genia/src/viewmodels/todo_viewmodel.dart';
 
 class AppAgent {
-  GenerativeModel initChat(String databaseSchema) {
+  GenerativeModel initChat() {
     String baseFormat = DateFormat(
       "yyyy-MM-dd'T'HH:mm:ssZ",
     ).format(DateTime.now());
@@ -59,6 +61,11 @@ Você tem acesso a uma única ferramenta (função) chamada `createTask`.
   }
 
   late ChatSession chat;
+
+  // Inicializa o chat. Deve ser chamado uma vez.
+  void initialize() {
+    chat = initChat().startChat();
+  }
 
   // 2. LÓGICA DE CONFIRMAÇÃO (REUTILIZADA E TRADUZIDA)
   // Mostra um diálogo de confirmação para o usuário.
@@ -145,15 +152,19 @@ Você tem acesso a uma única ferramenta (função) chamada `createTask`.
     return;
   }
 
-  // 4. IMPLEMENTAÇÃO DAS FUNÇÕES DE NOTAS
-  // Executa a ação APÓS a confirmação do usuário.
   void insertTodoCall(BuildContext context, FunctionCall functionCall) {
     final args = functionCall.args;
     final title = args['title'] as String;
-    // ... extraia outros argumentos como content, deadline, etc.
+    final content = args['content'] as String?;
+    final deadline = args['deadline'] as String?;
+    final reminderAt = args['reminderAt'] as String?;
 
-    // AQUI você chamaria sua lógica de estado para adicionar a nota
-    // Ex: context.read<AppState>().addNote(title: title, ...);
+    context.read<TodoViewModel>().addTodo(
+      title: title,
+      content: content,
+      deadline: deadline,
+      reminderAt: reminderAt,
+    );
 
     debugPrint('EXECUTANDO: Inserindo a tarefa "$title"');
     ScaffoldMessenger.of(context).showSnackBar(
@@ -164,10 +175,8 @@ Você tem acesso a uma única ferramenta (função) chamada `createTask`.
   void removeTodoCall(BuildContext context, FunctionCall functionCall) {
     final args = functionCall.args;
     final title = args['title'] as String;
-    // ... extraia o ID se disponível
-
-    // Lógica de estado para remover a nota
-    // Ex: context.read<AppState>().removeNote(title: title);
+    final id = args['id'] as String?;
+    context.read<TodoViewModel>().removeTodo(title: title, id: id);
 
     debugPrint('EXECUTANDO: Removendo a tarefa "$title"');
     ScaffoldMessenger.of(
@@ -179,10 +188,14 @@ Você tem acesso a uma única ferramenta (função) chamada `createTask`.
     final args = functionCall.args;
     final originalTitle = args['originalTitle'] as String;
     final newTitle = args['newTitle'] as String?;
-    // ... extraia outros campos a serem alterados
-
-    // Lógica de estado para editar a nota
-    // Ex: context.read<AppState>().editNote(originalTitle: originalTitle, ...);
+    final newContent = args['newContent'] as String?;
+    final newDeadline = args['newDeadline'] as String?;
+    context.read<TodoViewModel>().editTodo(
+      newTitle: newTitle,
+      originalTitle: originalTitle,
+      newContent: newContent,
+      newDeadline: newDeadline,
+    );
 
     debugPrint('EXECUTANDO: Editando a tarefa "$originalTitle"');
     ScaffoldMessenger.of(context).showSnackBar(
@@ -190,8 +203,6 @@ Você tem acesso a uma única ferramenta (função) chamada `createTask`.
     );
   }
 
-  // 5. PONTO DE ENTRADA PRINCIPAL
-  // Inicia o processo ao receber o texto do usuário.
   Future<void> sendMessageToAgent(
     String todoRequest,
     BuildContext context,

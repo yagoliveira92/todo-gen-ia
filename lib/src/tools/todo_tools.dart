@@ -92,8 +92,9 @@ final editTodoTool = FunctionDeclaration(
           'A nova data e hora final para a tarefa, no formato ISO 8601.',
       nullable: true,
     ),
-    'newReminderAt': Schema.string(
-      description: 'A nova data e hora para o lembrete, no formato ISO 8601.',
+    'location': Schema.string(
+      description:
+          'A localização onde deverá ser executada, caso informado pelo usuário',
       nullable: true,
     ),
   },

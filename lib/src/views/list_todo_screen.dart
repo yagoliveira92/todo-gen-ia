@@ -1,180 +1,216 @@
-// views/list_todo_screen.dart
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/todo_viewmodel.dart'; // Ajuste o caminho
-// Importe seu Command se precisar verificar o estado do comando diretamente
-// import 'package:todo_genia/src/utils/commands/command.dart';
+import 'package:todo_genia/src/models/todo_model.dart';
+import 'package:todo_genia/src/viewmodels/todo_viewmodel.dart';
 
-class ListTodoScreen extends StatefulWidget {
+class ListTodoScreen extends StatelessWidget {
   const ListTodoScreen({Key? key}) : super(key: key);
 
   @override
-  _ListTodoScreenState createState() => _ListTodoScreenState();
-}
-
-class _ListTodoScreenState extends State<ListTodoScreen> {
-  // Não precisamos mais do initState para adicionar todos, o ViewModel cuida disso.
-
-  @override
   Widget build(BuildContext context) {
-    // O Consumer<TodoViewModel> ainda é a forma principal de obter o viewModel
-    // e reconstruir quando a lista de todos (ou outras propriedades do viewModel) mudam.
     return Scaffold(
-      appBar: AppBar(title: const Text('Lista de Tarefas (Command)')),
+      appBar: AppBar(title: const Text('Organizador Mágico')),
       body: Consumer<TodoViewModel>(
         builder: (context, viewModel, child) {
-          if (viewModel.todos.isEmpty && !viewModel.addTodoCommand.running) {
-            // Exemplo de verificação
-            return const Center(child: Text('Nenhuma tarefa ainda!'));
+          if (viewModel.todos.isEmpty) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text(
+                  'Nenhuma tarefa ainda!\nClique no ícone ✨ para adicionar uma.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ),
+            );
           }
-          // Você pode querer mostrar um indicador de loading global se
-          // um comando importante (como fetchTodos) estiver rodando.
-          // if (viewModel.fetchTodosCommand.running) {
-          //   return Center(child: CircularProgressIndicator());
-          // }
 
-          return ListView.builder(
+          // Usando ListView.separated para adicionar espaçamento entre os cards
+          return ListView.separated(
+            padding: const EdgeInsets.all(8.0),
             itemCount: viewModel.todos.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final todo = viewModel.todos[index];
-              // Para o Checkbox, podemos usar o estado do comando para desabilitar
-              // enquanto a ação está em progresso, se desejado.
-              final isToggleRunning = viewModel.toggleTodoStatusCommand.running;
-
-              return ListTile(
-                title: Text(
-                  todo.title,
-                  style: TextStyle(
-                    decoration: todo.isDone ? TextDecoration.lineThrough : null,
-                    color: todo.isDone ? Colors.grey : null,
-                  ),
-                ),
-                leading: Checkbox(
-                  value: todo.isDone,
-                  onChanged: isToggleRunning
-                      ? null // Desabilita se o comando estiver rodando
-                      : (bool? value) {
-                          viewModel.toggleTodoStatusCommand.execute(todo.id).then((
-                            _,
-                          ) {
-                            // O resultado do comando (sucesso/erro) é gerenciado dentro do Command
-                            // e o viewModel.toggleTodoStatusCommand.result pode ser inspecionado.
-                            // A lista será atualizada pelo listener no ViewModel.
-                            if (viewModel.toggleTodoStatusCommand.error) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Erro ao atualizar tarefa: ${viewModel.toggleTodoStatusCommand.result?.toString() ?? "Erro desconhecido"}',
-                                  ),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                              viewModel.toggleTodoStatusCommand
-                                  .clearResult(); // Limpa o resultado
-                            }
-                          });
-                        },
-                ),
-                // Exemplo de como mostrar um indicador de loading no item
-                // se o comando específico para ele estiver rodando (mais complexo de rastrear por item)
-                // trailing: viewModel.toggleTodoStatusCommand.running && viewModel.toggleTodoStatusCommand.lastArg == todo.id
-                //    ? CircularProgressIndicator()
-                //    : null, // Ou seu ícone de deletar, etc.
-              );
+              return _buildTodoCard(context, todo, viewModel);
             },
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
-        // Use um `ChangeNotifierProvider.value` ou `Consumer` para o botão
-        // se você quiser que ele reaja ao estado `running` do `addTodoCommand`.
+        // O Consumer garante que o botão reaja ao estado de `isLoading`
         onPressed: () {
-          final viewModel = Provider.of<TodoViewModel>(context, listen: false);
-          if (viewModel.addTodoCommand.running)
-            return; // Evita múltiplos cliques
-          _showAddTaskDialog(context, viewModel);
+          final viewModel = context.read<TodoViewModel>();
+          // Não permite abrir a BottomSheet se já estiver processando algo
+          if (viewModel.isLoading) return;
+          _showAgentBottomSheet(context, viewModel);
         },
-        // Exemplo de como mudar o ícone baseado no estado do comando
         child: Consumer<TodoViewModel>(
           builder: (context, vm, _) {
-            return vm.addTodoCommand.running
+            // Mostra um indicador de progresso ou o ícone de adicionar
+            return vm.isLoading
                 ? const SizedBox(
                     width: 24,
                     height: 24,
                     child: CircularProgressIndicator(
                       color: Colors.white,
-                      strokeWidth: 2.0,
+                      strokeWidth: 2.5,
                     ),
                   )
-                : const Icon(Icons.add);
+                : const Icon(Icons.auto_awesome); // Ícone mais "mágico"
           },
         ),
       ),
     );
   }
 
-  Future<void> _showAddTaskDialog(
+  // NOVO: Widget para construir o Card da tarefa, muito mais detalhado
+  Widget _buildTodoCard(
+    BuildContext context,
+    TodoItem todo,
+    TodoViewModel viewModel,
+  ) {
+    final bool isDone = todo.isDone;
+    final Color? textColor = isDone ? Colors.grey : null;
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Linha principal com Checkbox, Título e botão de remover
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Checkbox(
+                  value: isDone,
+                  onChanged: (bool? value) =>
+                      viewModel.toggleTodoStatus(todo.id),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 12.0),
+                    child: Text(
+                      todo.title,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        decoration: isDone ? TextDecoration.lineThrough : null,
+                        color: textColor,
+                      ),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.delete_outline, color: Colors.red.shade300),
+                  onPressed: () {
+                    final request = 'Remover a tarefa "${todo.title}"';
+                    viewModel.processUserRequest(context, request);
+                  },
+                ),
+              ],
+            ),
+            // Seção de detalhes (conteúdo, prazo, lembrete)
+            if (todo.content.isNotEmpty || todo.deadline != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Divider(),
+                    if (todo.content.isNotEmpty)
+                      _buildDetailRow(
+                        Icons.short_text,
+                        todo.content,
+                        textColor,
+                      ),
+                    if (todo.deadline != null)
+                      _buildDetailRow(
+                        Icons.calendar_today_outlined,
+                        'Prazo: ${DateFormat('dd/MM/yyyy HH:mm').format(todo.deadline!)}',
+                        textColor,
+                      ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // NOVO: Widget auxiliar para criar as linhas de detalhes
+  Widget _buildDetailRow(IconData icon, String text, Color? textColor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: Colors.grey.shade600),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(text, style: TextStyle(color: textColor)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // NOVO: Método para mostrar a BottomSheet para entrada do usuário
+  Future<void> _showAgentBottomSheet(
     BuildContext context,
     TodoViewModel viewModel,
   ) async {
     final TextEditingController textFieldController = TextEditingController();
 
-    return showDialog<void>(
+    await showModalBottomSheet<void>(
       context: context,
-      barrierDismissible: !viewModel
-          .addTodoCommand
-          .running, // Não permite fechar se estiver adicionando
+      isScrollControlled: true, // Permite que o sheet suba com o teclado
       builder: (BuildContext dialogContext) {
-        // Use um StatefulWidget dentro do diálogo ou um ValueListenableBuilder
-        // se você quiser que o botão "Adicionar" do diálogo também reaja ao estado do comando.
-        // Por simplicidade, aqui o botão não será desabilitado dinamicamente no diálogo.
-        return AlertDialog(
-          title: const Text('Adicionar Nova Tarefa'),
-          content: TextField(
-            controller: textFieldController,
-            decoration: const InputDecoration(hintText: "Título da tarefa"),
-            autofocus: true,
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(dialogContext).viewInsets.bottom,
+            top: 20,
+            left: 20,
+            right: 20,
           ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Cancelar'),
-              onPressed: viewModel.addTodoCommand.running
-                  ? null
-                  : () => Navigator.of(dialogContext).pop(),
-            ),
-            TextButton(
-              child: const Text('Adicionar'),
-              onPressed: () {
-                // Não precisa verificar `running` aqui explicitamente se o botão já faz isso
-                // ou se o FAB já previne a abertura do diálogo.
-                if (textFieldController.text.isNotEmpty) {
-                  viewModel.addTodoCommand.execute(textFieldController.text).then((
-                    _,
-                  ) {
-                    if (viewModel.addTodoCommand.completed) {
-                      Navigator.of(dialogContext).pop();
-                      // Opcional: Mostrar SnackBar de sucesso
-                      // ScaffoldMessenger.of(context).showSnackBar(
-                      //   SnackBar(content: Text('Tarefa adicionada!'), backgroundColor: Colors.green),
-                      // );
-                    } else if (viewModel.addTodoCommand.error) {
-                      // Mostrar erro dentro do diálogo ou fechar e mostrar SnackBar
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Erro ao adicionar: ${viewModel.addTodoCommand.result?.toString() ?? "Erro desconhecido"}',
-                          ),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
-                    // Sempre limpe o resultado após o uso para evitar mostrar mensagens antigas
-                    viewModel.addTodoCommand.clearResult();
-                  });
-                }
-              },
-            ),
-          ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Text(
+                'O que você gostaria de fazer?',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: textFieldController,
+                decoration: const InputDecoration(
+                  hintText: 'Ex: "Lembrar de comprar pão amanhã às 8h"',
+                  border: OutlineInputBorder(),
+                ),
+                autofocus: true,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                child: const Text('Enviar'),
+                onPressed: () {
+                  if (textFieldController.text.isNotEmpty) {
+                    // Pega o texto e envia para o ViewModel processar
+                    viewModel.processUserRequest(
+                      context,
+                      textFieldController.text,
+                    );
+                    // Fecha a BottomSheet
+                    Navigator.of(dialogContext).pop();
+                  }
+                },
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
         );
       },
     );

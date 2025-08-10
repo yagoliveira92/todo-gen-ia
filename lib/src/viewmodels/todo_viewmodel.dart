@@ -1,31 +1,88 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:todo_genia/src/agent/app_agent.dart';
 import 'package:todo_genia/src/models/todo_model.dart'; // Certifique-se que seu TodoItem tem um `copyWith`
 
 class TodoViewModel extends ChangeNotifier {
-  // A lista de tarefas permanece a mesma
   final List<TodoItem> _todos = [];
   List<TodoItem> get todos => List.unmodifiable(_todos);
 
+  final AppAgent _appAgent = AppAgent();
+  bool _isLoading = false;
+  bool get isLoading => _isLoading;
+
   TodoViewModel() {
     _initializeDefaultTodos();
+    _appAgent.initialize();
   }
 
   void _initializeDefaultTodos() {
     if (_todos.isEmpty) {
-      _addInitialTodo("Comprar leite");
-      _addInitialTodo("Fazer exercícios");
-      _addInitialTodo("Estudar Flutter com o AppAgent");
+      _addInitialTodo(
+        "Comprar leite",
+        "Integral, sem lactose",
+        "Mercado",
+        DateTime.now().add(Duration(days: 1)),
+      );
+      _addInitialTodo(
+        "Fazer exercícios",
+        "30 minutos de cardio",
+        "Academia",
+        DateTime.now().add(Duration(days: 2)),
+      );
+      _addInitialTodo(
+        "Estudar Flutter com o AppAgent",
+        "Utilizar o plano de estudos da Alura",
+        "Alura",
+        DateTime.now().add(Duration(days: 3)),
+      );
     }
   }
 
-  void _addInitialTodo(String title) {
+  void _addInitialTodo(
+    String title,
+    String content,
+    String location,
+    DateTime deadline,
+  ) {
     final newTodo = TodoItem(
       id: DateTime.now().millisecondsSinceEpoch.toString() + title,
       title: title,
       createAt: DateTime.now(),
-      content: "",
+      content: content,
+      location: location,
+      deadline: deadline,
+      isDone: false,
     );
     _todos.add(newTodo);
+  }
+
+  // NOVO: Método para a View chamar. Ele orquestra o fluxo da IA.
+  Future<void> processUserRequest(BuildContext context, String request) async {
+    _setLoading(true);
+    try {
+      // Delega a solicitação para o AppAgent
+      await _appAgent.sendMessageToAgent(request, context);
+    } catch (e) {
+      debugPrint("Erro no processUserRequest do ViewModel: $e");
+      // Opcional: Mostrar um erro global se necessário
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ocorreu um erro: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // NOVO: Helper para gerenciar o estado de carregamento
+  void _setLoading(bool loading) {
+    _isLoading = loading;
+    notifyListeners();
   }
 
   // --- MÉTODOS PÚBLICOS PARA SEREM USADOS PELO AppAgent ---
@@ -93,8 +150,6 @@ class TodoViewModel extends ChangeNotifier {
     }
   }
 
-  /// Edita uma tarefa existente.
-  /// Corresponde à ferramenta `editTodoTool`.
   Future<void> editTodo({
     String? id,
     required String originalTitle,
@@ -140,7 +195,6 @@ class TodoViewModel extends ChangeNotifier {
     }
   }
 
-  /// Alterna o status de 'concluído' de uma tarefa. Pode ser chamado pela UI.
   Future<void> toggleTodoStatus(String id) async {
     try {
       final todoIndex = _todos.indexWhere((todo) => todo.id == id);
