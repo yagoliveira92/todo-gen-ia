@@ -57,15 +57,12 @@ class TodoViewModel extends ChangeNotifier {
     _todos.add(newTodo);
   }
 
-  // NOVO: Método para a View chamar. Ele orquestra o fluxo da IA.
   Future<void> processUserRequest(BuildContext context, String request) async {
     _setLoading(true);
     try {
-      // Delega a solicitação para o AppAgent
       await _appAgent.sendMessageToAgent(request, context);
     } catch (e) {
       debugPrint("Erro no processUserRequest do ViewModel: $e");
-      // Opcional: Mostrar um erro global se necessário
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -79,16 +76,11 @@ class TodoViewModel extends ChangeNotifier {
     }
   }
 
-  // NOVO: Helper para gerenciar o estado de carregamento
   void _setLoading(bool loading) {
     _isLoading = loading;
     notifyListeners();
   }
 
-  // --- MÉTODOS PÚBLICOS PARA SEREM USADOS PELO AppAgent ---
-
-  /// Adiciona uma nova tarefa à lista.
-  /// Corresponde à ferramenta `insertTodoTool`.
   Future<void> addTodo({
     required String title,
     String? content,
@@ -100,7 +92,6 @@ class TodoViewModel extends ChangeNotifier {
         throw Exception("O título não pode estar vazio.");
       }
 
-      // Converte as strings de data para DateTime, se existirem
       final deadlineDate = deadline != null
           ? DateTime.tryParse(deadline)
           : null;
@@ -117,7 +108,7 @@ class TodoViewModel extends ChangeNotifier {
       );
 
       _todos.add(newTodo);
-      notifyListeners(); // Notifica a UI diretamente
+      notifyListeners();
     } catch (e) {
       debugPrint('Erro ao adicionar tarefa: $e');
       // Lança a exceção para que o chamador (AppAgent) possa lidar com ela
@@ -140,7 +131,7 @@ class TodoViewModel extends ChangeNotifier {
 
       if (removedIndex != -1) {
         _todos.removeAt(removedIndex);
-        notifyListeners(); // Notifica a UI diretamente
+        notifyListeners();
       } else {
         throw Exception("Tarefa com título '$title' não encontrada.");
       }
@@ -185,7 +176,7 @@ class TodoViewModel extends ChangeNotifier {
         );
 
         _todos[todoIndex] = updatedTodo;
-        notifyListeners(); // Notifica a UI diretamente
+        notifyListeners();
       } else {
         throw Exception("Tarefa com título '$originalTitle' não encontrada.");
       }
@@ -212,7 +203,6 @@ class TodoViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
-    // A limpeza agora é muito mais simples
     super.dispose();
   }
 }

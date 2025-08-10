@@ -5,7 +5,7 @@ import 'package:todo_genia/src/models/todo_model.dart';
 import 'package:todo_genia/src/viewmodels/todo_viewmodel.dart';
 
 class ListTodoScreen extends StatelessWidget {
-  const ListTodoScreen({Key? key}) : super(key: key);
+  const ListTodoScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +26,6 @@ class ListTodoScreen extends StatelessWidget {
             );
           }
 
-          // Usando ListView.separated para adicionar espaçamento entre os cards
           return ListView.separated(
             padding: const EdgeInsets.all(8.0),
             itemCount: viewModel.todos.length,
@@ -39,16 +38,13 @@ class ListTodoScreen extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        // O Consumer garante que o botão reaja ao estado de `isLoading`
         onPressed: () {
           final viewModel = context.read<TodoViewModel>();
-          // Não permite abrir a BottomSheet se já estiver processando algo
           if (viewModel.isLoading) return;
           _showAgentBottomSheet(context, viewModel);
         },
         child: Consumer<TodoViewModel>(
           builder: (context, vm, _) {
-            // Mostra um indicador de progresso ou o ícone de adicionar
             return vm.isLoading
                 ? const SizedBox(
                     width: 24,
@@ -58,14 +54,13 @@ class ListTodoScreen extends StatelessWidget {
                       strokeWidth: 2.5,
                     ),
                   )
-                : const Icon(Icons.auto_awesome); // Ícone mais "mágico"
+                : const Icon(Icons.auto_awesome);
           },
         ),
       ),
     );
   }
 
-  // NOVO: Widget para construir o Card da tarefa, muito mais detalhado
   Widget _buildTodoCard(
     BuildContext context,
     TodoItem todo,
@@ -82,7 +77,6 @@ class ListTodoScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Linha principal com Checkbox, Título e botão de remover
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -143,7 +137,6 @@ class ListTodoScreen extends StatelessWidget {
     );
   }
 
-  // NOVO: Widget auxiliar para criar as linhas de detalhes
   Widget _buildDetailRow(IconData icon, String text, Color? textColor) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -159,7 +152,6 @@ class ListTodoScreen extends StatelessWidget {
     );
   }
 
-  // NOVO: Método para mostrar a BottomSheet para entrada do usuário
   Future<void> _showAgentBottomSheet(
     BuildContext context,
     TodoViewModel viewModel,

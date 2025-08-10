@@ -62,13 +62,10 @@ Você tem acesso a uma única ferramenta (função) chamada `createTask`.
 
   late ChatSession chat;
 
-  // Inicializa o chat. Deve ser chamado uma vez.
   void initialize() {
     chat = initChat().startChat();
   }
 
-  // 2. LÓGICA DE CONFIRMAÇÃO (REUTILIZADA E TRADUZIDA)
-  // Mostra um diálogo de confirmação para o usuário.
   Future<bool> askConfirmation(BuildContext context, String question) async {
     var response = await showDialog<bool>(
       context: context,
@@ -94,7 +91,6 @@ Você tem acesso a uma única ferramenta (função) chamada `createTask`.
     return response ?? false;
   }
 
-  // Chamado quando a IA quer usar a ferramenta 'askConfirmation'.
   Future<GenerateContentResponse?> askConfirmationCall(
     BuildContext context,
     FunctionCall functionCall,
@@ -114,8 +110,6 @@ Você tem acesso a uma única ferramenta (função) chamada `createTask`.
     return null;
   }
 
-  // 3. O ROTEADOR PRINCIPAL DE FUNÇÕES
-  // Verifica e direciona as chamadas de função da IA para os métodos corretos.
   void checkFunctionCalls(
     BuildContext context,
     Iterable<FunctionCall> functionCalls,
@@ -142,7 +136,6 @@ Você tem acesso a uma única ferramenta (função) chamada `createTask`.
           );
       }
 
-      // Se a resposta de uma função contiver outra chamada (encadeamento), processa-a.
       if (response != null &&
           response.functionCalls.isNotEmpty &&
           context.mounted) {
