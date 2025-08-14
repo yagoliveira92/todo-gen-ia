@@ -1,19 +1,16 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:todo_genia/src/agent/app_agent.dart';
 import 'package:todo_genia/src/models/todo_model.dart'; // Certifique-se que seu TodoItem tem um `copyWith`
 
 class TodoViewModel extends ChangeNotifier {
   final List<TodoItem> _todos = [];
   List<TodoItem> get todos => List.unmodifiable(_todos);
 
-  final AppAgent _appAgent = AppAgent();
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
   TodoViewModel() {
     _initializeDefaultTodos();
-    _appAgent.initialize();
   }
 
   void _initializeDefaultTodos() {
@@ -59,9 +56,7 @@ class TodoViewModel extends ChangeNotifier {
 
   Future<void> processUserRequest(BuildContext context, String request) async {
     _setLoading(true);
-    try {
-      await _appAgent.sendMessageToAgent(request, context);
-    } catch (e) {
+    try {} catch (e) {
       debugPrint("Erro no processUserRequest do ViewModel: $e");
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
